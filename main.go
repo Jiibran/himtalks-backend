@@ -3,14 +3,35 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"himtalks-backend/config"
 	"himtalks-backend/models"
 	"himtalks-backend/routes"
 	"himtalks-backend/ws"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Akses environment variables
+	clientID := os.Getenv("GOOGLE_CLIENT_ID")
+	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	redirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
+	secretKey := os.Getenv("SECRET_KEY")
+
+	log.Println("Client ID:", clientID)
+	log.Println("Client Secret:", clientSecret)
+	log.Println("Redirect URL:", redirectURL)
+	log.Println("Secret Key:", secretKey)
+
 	// Load environment variables
 	config.LoadEnv()
 

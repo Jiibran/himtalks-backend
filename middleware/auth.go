@@ -1,30 +1,34 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
-	"os"
+	"strings"
 
-	"github.com/dgrijalva/jwt-go"
+	"himtalks-backend/utils"
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Ambil token dari header Authorization
 		tokenString := r.Header.Get("Authorization")
-
 		if tokenString == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("SECRET_KEY")), nil
-		})
+		// Hilangkan "Bearer " dari token
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
+		// Validasi token
+		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		// Simpan email di context
+		ctx := context.WithValue(r.Context(), "email", claims.Email)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
