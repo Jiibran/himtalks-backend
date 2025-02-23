@@ -28,7 +28,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			ctx := context.WithValue(r.Context(), emailContextKey, claims.Email)
+			return
 		}
 
 		// Simpan email di context

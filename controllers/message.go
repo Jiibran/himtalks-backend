@@ -32,3 +32,27 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(message)
 }
+
+// GetMessageList mengembalikan daftar pesan
+func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Request) {
+	rows, err := mc.DB.Query("SELECT id, content, created_at FROM messages")
+	if err != nil {
+		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var messageList []models.Message
+	for rows.Next() {
+		var message models.Message
+		err := rows.Scan(&message.ID, &message.Content, &message.CreatedAt)
+		if err != nil {
+			http.Error(w, "Failed to scan message", http.StatusInternalServerError)
+			return
+		}
+		messageList = append(messageList, message)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messageList)
+}

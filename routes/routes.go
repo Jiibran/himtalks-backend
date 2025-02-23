@@ -38,5 +38,9 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 		fmt.Fprintf(w, "Welcome, %s!", email)
 	}).Methods("GET")
 
+	// Tambahkan endpoint untuk mendapatkan daftar songfess dan pesan
+	protected.HandleFunc("/songfess", songfessController.GetSongfessList).Methods("GET")
+	protected.HandleFunc("/messages", messageController.GetMessageList).Methods("GET")
+
 	return r
 }
