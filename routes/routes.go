@@ -51,6 +51,11 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 		fmt.Fprintf(w, "Welcome, %s!", email)
 	}).Methods("GET")
 
+	// Spotify API Routes
+	spotifyController := controllers.NewSpotifyController()
+	r.HandleFunc("/api/spotify/search", spotifyController.SearchTracks).Methods("GET")
+	r.HandleFunc("/api/spotify/track", spotifyController.GetTrack).Methods("GET")
+
 	// Tambahan route admin
 	admin := protected.PathPrefix("/admin").Subrouter()
 	adminHandler := &controllers.AdminHandler{DB: db}

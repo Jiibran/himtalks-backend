@@ -41,6 +41,12 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Kirim pesan ke WebSocket
+	ws.BroadcastMessage(ws.Message{
+		Type: "message",
+		Data: message,
+	})
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(message)
 }

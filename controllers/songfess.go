@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"himtalks-backend/models"
+	"himtalks-backend/ws"
 )
 
 type SongfessController struct {
@@ -25,12 +26,31 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Simpan songfess ke database
-	query := `INSERT INTO songfess (content, song_id) VALUES ($1, $2) RETURNING id, created_at`
-	err = sc.DB.QueryRow(query, songfess.Content, songfess.SongID).Scan(&songfess.ID, &songfess.CreatedAt)
+	query := `INSERT INTO songfess (content, song_id, song_title, artist, album_art, start_time, end_time) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7) 
+              RETURNING id, created_at`
+
+	err = sc.DB.QueryRow(
+		query,
+		songfess.Content,
+		songfess.SongID,
+		songfess.SongTitle,
+		songfess.Artist,
+		songfess.AlbumArt,
+		songfess.StartTime,
+		songfess.EndTime,
+	).Scan(&songfess.ID, &songfess.CreatedAt)
+
 	if err != nil {
-		http.Error(w, "Failed to save songfess", http.StatusInternalServerError)
+		http.Error(w, "Failed to save songfess: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Broadcast songfess to WebSocket clients
+	ws.BroadcastMessage(ws.Message{
+		Type: "songfess",
+		Data: songfess,
+	})
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(songfess)
@@ -39,7 +59,8 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 
 // GetSongfessList mengembalikan daftar songfess
 func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Request) {
-	rows, err := sc.DB.Query("SELECT id, content, song_id, created_at FROM songfess")
+	rows, err := sc.DB.Query(
+		"SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, created_at FROM songfess")
 	if err != nil {
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
@@ -49,7 +70,16 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 	var songfessList []models.Songfess
 	for rows.Next() {
 		var songfess models.Songfess
-		err := rows.Scan(&songfess.ID, &songfess.Content, &songfess.SongID, &songfess.CreatedAt)
+		err := rows.Scan(
+			&songfess.ID,
+			&songfess.Content,
+			&songfess.SongID,
+			&songfess.SongTitle,
+			&songfess.Artist,
+			&songfess.AlbumArt,
+			&songfess.StartTime,
+			&songfess.EndTime,
+			&songfess.CreatedAt)
 		if err != nil {
 			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
 			return

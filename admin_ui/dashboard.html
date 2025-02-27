@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        .container { margin: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; }
+        .message-list, .songfess-list { max-height: 300px; overflow-y: auto; }
+        .message-item, .songfess-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            background: #f5f5f5; 
+        }
+        .user-info {
+            background: #e3f2fd;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- User Info Section -->
+        <div class="user-info" id="userInfo">
+            Loading user info...
+        </div>
+
+        <!-- Message Section -->
+        <div class="section">
+            <h2>Messages</h2>
+            <div>
+                <textarea id="messageContent" rows="3" cols="50" placeholder="Enter message"></textarea>
+                <button onclick="sendMessage()">Send Message</button>
+            </div>
+            <div class="message-list" id="messageList">
+                Loading messages...
+            </div>
+        </div>
+
+        <!-- Songfess Section -->
+        <div class="section">
+            <h2>Songfess</h2>
+            <div>
+                <textarea id="songfessContent" rows="3" cols="50" placeholder="Enter songfess"></textarea>
+                <input type="text" id="songId" placeholder="Spotify Track ID">
+                <button onclick="sendSongfess()">Send Songfess</button>
+            </div>
+            <div class="songfess-list" id="songfessList">
+                Loading songfess...
+            </div>
+        </div>
+
+        <!-- Admin Controls -->
+        <div class="section">
+            <h2>Admin Controls</h2>
+            <div>
+                <h3>Add Admin</h3>
+                <input type="email" id="newAdminEmail" placeholder="Email">
+                <button onclick="addAdmin()">Add Admin</button>
+            </div>
+            <div>
+                <h3>Configure Songfess Days</h3>
+                <input type="number" id="songfessDays" placeholder="Days">
+                <button onclick="updateSongfessDays()">Update</button>
+            </div>
+            <div>
+                <h3>Add Blacklist Word</h3>
+                <input type="text" id="blacklistWord" placeholder="Word">
+                <button onclick="addBlacklistWord()">Add Word</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const API_BASE = 'https://api.teknohive.me';
+    let ws;
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsURL = `${wsProtocol}//api.teknohive.me/ws`;
+        ws = new WebSocket(wsURL);
+        
+        ws.onmessage = function(evt) {
+            const message = JSON.parse(evt.data);
+            if (message.type === 'message') {
+                loadMessages();
+            } else if (message.type === 'songfess') {
+                loadSongfess();
+            }
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket connection closed. Retrying in 5 seconds...');
+            setTimeout(initWebSocket, 5000);
+        };
+    }
+
+    // Load user info
+    async function loadUserInfo() {
+        const token = localStorage.getItem('jwt');
+        if (!token) {
+            window.location.href = 'http://himtalks.japaneast.cloudapp.azure.com/admin_ui/index.html';
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/api/protected`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userInfo').innerHTML = `
+                    <h2>Welcome, ${data.email}</h2>
+                    <button onclick="logout()">Logout</button>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading user info:', error);
+        }
+    }
+
+    // Messages
+    async function loadMessages() {
+        const token = localStorage.getItem('jwt');
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/messages`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const messages = await res.json();
+                document.getElementById('messageList').innerHTML = messages
+                    .map(msg => `
+                        <div class="message-item">
+                            <p>${msg.content}</p>
+                            <small>ID: ${msg.id} | ${new Date(msg.created_at).toLocaleString()}</small>
+                            <button onclick="deleteMessage(${msg.id})">Delete</button>
+                        </div>
+                    `)
+                    .join('');
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
+    }
+
+    async function sendMessage() {
+        const token = localStorage.getItem('jwt');
+        const content = document.getElementById('messageContent').value;
+        try {
+            const res = await fetch(`${API_BASE}/message`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ content })
+            });
+            if (res.ok) {
+                document.getElementById('messageContent').value = '';
+                loadMessages();
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    }
+
+    // Songfess
+    async function loadSongfess() {
+        const token = localStorage.getItem('jwt');
+        try {
+            const res = await fetch(`${API_BASE}/songfess`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const songfessList = await res.json();
+                document.getElementById('songfessList').innerHTML = songfessList
+                    .map(sf => `
+                        <div class="songfess-item">
+                            <p>${sf.content}</p>
+                            <p>Song ID: ${sf.song_id}</p>
+                            <small>${new Date(sf.created_at).toLocaleString()}</small>
+                        </div>
+                    `)
+                    .join('');
+            }
+        } catch (error) {
+            console.error('Error loading songfess:', error);
+        }
+    }
+
+    async function sendSongfess() {
+        const token = localStorage.getItem('jwt');
+        const content = document.getElementById('songfessContent').value;
+        const songId = document.getElementById('songId').value;
+        try {
+            const res = await fetch(`${API_BASE}/songfess`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ content, song_id: songId })
+            });
+            if (res.ok) {
+                document.getElementById('songfessContent').value = '';
+                document.getElementById('songId').value = '';
+                loadSongfess();
+            }
+        } catch (error) {
+            console.error('Error sending songfess:', error);
+        }
+    }
+
+    // Admin functions
+    async function addAdmin() {
+        const token = localStorage.getItem('jwt');
+        const email = document.getElementById('newAdminEmail').value;
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/addAdmin`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ email })
+            });
+            if (res.ok) {
+                alert('Admin added successfully');
+                document.getElementById('newAdminEmail').value = '';
+            }
+        } catch (error) {
+            console.error('Error adding admin:', error);
+        }
+    }
+
+    async function updateSongfessDays() {
+        const token = localStorage.getItem('jwt');
+        const days = document.getElementById('songfessDays').value;
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/configSongfessDays`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ days })
+            });
+            if (res.ok) {
+                alert('Songfess days updated');
+                document.getElementById('songfessDays').value = '';
+            }
+        } catch (error) {
+            console.error('Error updating songfess days:', error);
+        }
+    }
+
+    async function addBlacklistWord() {
+        const token = localStorage.getItem('jwt');
+        const word = document.getElementById('blacklistWord').value;
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/blacklist`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ word })
+            });
+            if (res.ok) {
+                alert('Word blacklisted successfully');
+                document.getElementById('blacklistWord').value = '';
+            }
+        } catch (error) {
+            console.error('Error adding blacklist word:', error);
+        }
+    }
+
+    async function deleteMessage(id) {
+        const token = localStorage.getItem('jwt');
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/message/delete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ id })
+            });
+            if (res.ok) {
+                loadMessages();
+            }
+        } catch (error) {
+            console.error('Error deleting message:', error);
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('jwt');
+        window.location.href = 'http://himtalks.japaneast.cloudapp.azure.com/admin_ui/index.html';
+    }
+
+    // Initialize
+    window.onload = () => {
+        loadUserInfo();
+        loadMessages();
+        loadSongfess();
+        initWebSocket();
+    };
+    </script>
+</body>
+</html>
