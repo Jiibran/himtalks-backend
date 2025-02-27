@@ -3,7 +3,9 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"himtalks-backend/models"
 )
@@ -14,6 +16,7 @@ type SongfessController struct {
 
 // SendSongfess menangani pengiriman songfess
 func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Request) {
+	log.Println("Received POST request to /songfess")
 	var songfess models.Songfess
 	err := json.NewDecoder(r.Body).Decode(&songfess)
 	if err != nil {
@@ -31,11 +34,36 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(songfess)
+	log.Printf("Received songfess: %+v", songfess)
 }
 
 // GetSongfessList mengembalikan daftar songfess
 func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Request) {
 	rows, err := sc.DB.Query("SELECT id, content, song_id, created_at FROM songfess")
+	if err != nil {
+		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var songfessList []models.Songfess
+	for rows.Next() {
+		var songfess models.Songfess
+		err := rows.Scan(&songfess.ID, &songfess.Content, &songfess.SongID, &songfess.CreatedAt)
+		if err != nil {
+			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
+			return
+		}
+		songfessList = append(songfessList, songfess)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(songfessList)
+}
+
+// Hanya menampilkan data >= cutoff
+func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r *http.Request, cutoff time.Time) {
+	rows, err := sc.DB.Query("SELECT id, content, song_id, created_at FROM songfess WHERE created_at >= $1", cutoff)
 	if err != nil {
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return

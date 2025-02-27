@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Menu</title>
+  <script>
+    window.onload = async () => {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        alert('Tidak ada token, silakan login terlebih dahulu.');
+        window.location.href = '/admin_ui/index.html';
+        return;
+      }
+      // Cek apakah token masih valid
+      const res = await fetch('/api/protected', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) {
+        alert('Token tidak valid atau expired.');
+        window.location.href = '/admin_ui/index.html';
+      }
+      // Jika valid, tampilkan menu admin
+    };
+
+    // Contoh menu admin minimal
+    async function loadAdminData() {
+      const token = localStorage.getItem('jwt');
+      const res = await fetch('/api/admin/messages', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Messages:', data);
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Admin Menu</h1>
+  <button onclick="loadAdminData()">Load Messages</button>
+</body>
+</html>

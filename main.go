@@ -8,8 +8,10 @@ import (
 	"himtalks-backend/config"
 	"himtalks-backend/models"
 	"himtalks-backend/routes"
+
 	"himtalks-backend/ws"
 
+	"github.com/gorilla/handlers"
 	"github.com/joho/godotenv"
 )
 
@@ -55,14 +57,18 @@ func main() {
 	// Setup routes
 	r := routes.SetupRoutes(db)
 
-	// WebSocket endpoint dengan CSP header
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		// Tambahkan CSP header untuk mengizinkan koneksi WebSocket
-		w.Header().Set("Content-Security-Policy", "connect-src 'self' ws://localhost:8080")
-		ws.HandleConnections(w, r)
-	})
+	// Start WebSocket handler
+	go ws.HandleMessages()
 
-	// Start server
+	// Middleware untuk menonaktifkan CORS
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://himtalks.japaneast.cloudapp.azure.com"}), // Ganti * dengan domain FE
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowCredentials(), // Mengaktifkan penggunaan credentials (cookies/session)
+	)
+
+	// Start server dengan middleware CORS
 	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":8080", corsHandler(r)))
 }

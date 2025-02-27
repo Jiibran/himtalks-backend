@@ -8,15 +8,26 @@ import (
 	"os"
 	"strings"
 
-	"himtalks-backend/utils" // Import package utils
+	"himtalks-backend/utils"
 
+	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
-type AdminController struct{}
-
 var (
+	googleOAuthConfig *oauth2.Config
+	randomState       = "random"
+)
+
+func init() {
+	// Load .env
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// Setelah .env termuat, inisialisasi googleOAuthConfig
 	googleOAuthConfig = &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -24,11 +35,17 @@ var (
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
 		Endpoint:     google.Endpoint,
 	}
-	randomState = "random"
-)
+
+	// Debug
+	log.Println("GOOGLE_CLIENT_ID:", os.Getenv("GOOGLE_CLIENT_ID"))
+	log.Println("GOOGLE_CLIENT_SECRET:", os.Getenv("GOOGLE_CLIENT_SECRET"))
+	log.Println("GOOGLE_REDIRECT_URL:", os.Getenv("GOOGLE_REDIRECT_URL"))
+}
+
+type AdminController struct{}
 
 func (ac *AdminController) Login(w http.ResponseWriter, r *http.Request) {
-	url := googleOAuthConfig.AuthCodeURL(randomState)
+	url := googleOAuthConfig.AuthCodeURL(randomState, oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
@@ -64,8 +81,7 @@ func (ac *AdminController) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validasi email (hanya email Unsika yang diizinkan)
-	if !strings.HasSuffix(userInfo.Email, "@unsika.ac.id") {
+	if !strings.HasSuffix(userInfo.Email, "@student.unsika.ac.id") {
 		log.Println("Email not allowed")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
@@ -79,7 +95,9 @@ func (ac *AdminController) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Kirim token sebagai respons
+	// Log token di server
+	log.Println("[DEBUG] Generated JWT:", tokenString)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"token": tokenString,

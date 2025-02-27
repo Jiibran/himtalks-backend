@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"himtalks-backend/models"
+	"himtalks-backend/ws"
 )
 
 type MessageController struct {
@@ -18,6 +19,17 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 	err := json.NewDecoder(r.Body).Decode(&message)
 	if err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	// Cek blacklist
+	blacklisted, err := models.IsBlacklisted(mc.DB, message.Content)
+	if err != nil {
+		http.Error(w, "Error checking blacklist", http.StatusInternalServerError)
+		return
+	}
+	if blacklisted {
+		http.Error(w, "Message contains blacklisted word", http.StatusForbidden)
 		return
 	}
 
@@ -55,4 +67,27 @@ func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messageList)
+}
+
+// DeleteMessage menghapus pesan berdasarkan ID
+func (mc *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	var data struct{ ID int }
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+	_, err := mc.DB.Exec("DELETE FROM messages WHERE id=$1", data.ID)
+	if err != nil {
+		http.Error(w, "Failed to delete message", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
+	// Kirim pesan ke WebSocket
+	msg := ws.Message{
+		Type: "delete",
+		Data: data.ID,
+	}
+	ws.BroadcastMessage(msg)
+
 }

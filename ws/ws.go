@@ -3,6 +3,7 @@ package ws
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,11 +14,21 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func HandleConnections(w http.ResponseWriter, r *http.Request) {
-	// Log headers untuk debugging
-	log.Println("Headers:", r.Header)
+var clients = make(map[*websocket.Conn]bool)
+var broadcast = make(chan Message)
+var mutex = &sync.Mutex{}
 
-	// Upgrade koneksi HTTP ke WebSocket
+type Message struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
+// Tambahkan fungsi ini di package ws
+func BroadcastMessage(msg Message) {
+	broadcast <- msg
+}
+
+func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatalf("WebSocket upgrade error: %v", err)
@@ -25,22 +36,36 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	log.Println("Client connected via WebSocket")
+	mutex.Lock()
+	clients[ws] = true
+	mutex.Unlock()
 
-	// Loop untuk membaca dan menulis pesan
 	for {
-		messageType, p, err := ws.ReadMessage()
+		var msg Message
+		err := ws.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("WebSocket read error: %v", err)
+			mutex.Lock()
+			delete(clients, ws)
+			mutex.Unlock()
 			break
 		}
+		broadcast <- msg
+	}
+}
 
-		log.Printf("Received message: %s", string(p))
-
-		// Kirim pesan balik ke client
-		if err := ws.WriteMessage(messageType, p); err != nil {
-			log.Printf("WebSocket write error: %v", err)
-			break
+func HandleMessages() {
+	for {
+		msg := <-broadcast
+		mutex.Lock()
+		for client := range clients {
+			err := client.WriteJSON(msg)
+			if err != nil {
+				log.Printf("WebSocket write error: %v", err)
+				client.Close()
+				delete(clients, client)
+			}
 		}
+		mutex.Unlock()
 	}
 }
