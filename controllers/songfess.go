@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv" // Untuk konversi string ke int
 	"time"
 
 	"himtalks-backend/models"
 	"himtalks-backend/ws"
+
+	"github.com/gorilla/mux" // Untuk akses URL params
 )
 
 type SongfessController struct {
@@ -139,4 +142,49 @@ func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(songfessList)
+}
+
+// GetSongfessById mengembalikan songfess berdasarkan ID
+func (sc *SongfessController) GetSongfessById(w http.ResponseWriter, r *http.Request) {
+	// Ambil ID dari parameter URL
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid songfess ID", http.StatusBadRequest)
+		return
+	}
+
+	// Query database untuk mencari songfess dengan ID tertentu
+	query := `
+        SELECT id, content, song_id, song_title, artist, album_art, 
+               start_time, end_time, sender_name, recipient_name, created_at 
+        FROM songfess 
+        WHERE id = $1`
+
+	var songfess models.Songfess
+	err = sc.DB.QueryRow(query, id).Scan(
+		&songfess.ID,
+		&songfess.Content,
+		&songfess.SongID,
+		&songfess.SongTitle,
+		&songfess.Artist,
+		&songfess.AlbumArt,
+		&songfess.StartTime,
+		&songfess.EndTime,
+		&songfess.SenderName,
+		&songfess.RecipientName,
+		&songfess.CreatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Songfess not found", http.StatusNotFound)
+		} else {
+			log.Printf("Error fetching songfess by ID: %v", err)
+			http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(songfess)
 }

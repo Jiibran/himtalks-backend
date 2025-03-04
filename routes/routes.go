@@ -34,6 +34,8 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 		cutoff := time.Now().AddDate(0, 0, -days)
 		songfessController.GetSongfessListWithCutoff(w, r, cutoff)
 	}).Methods("GET")
+	// Endpoint untuk mengambil songfess berdasarkan ID
+	r.HandleFunc("/songfess/{id:[0-9]+}", songfessController.GetSongfessById).Methods("GET")
 
 	// Websocket
 	r.HandleFunc("/ws", ws.HandleConnections)
