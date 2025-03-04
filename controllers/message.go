@@ -22,6 +22,12 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Validasi kategori
+	if message.Category != "kritik" && message.Category != "saran" {
+		http.Error(w, "Category must be 'kritik' or 'saran'", http.StatusBadRequest)
+		return
+	}
+
 	// Cek blacklist
 	blacklisted, err := models.IsBlacklisted(mc.DB, message.Content)
 	if err != nil {
@@ -34,10 +40,20 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Simpan pesan ke database
-	query := `INSERT INTO messages (content) VALUES ($1) RETURNING id, created_at`
-	err = mc.DB.QueryRow(query, message.Content).Scan(&message.ID, &message.CreatedAt)
+	query := `INSERT INTO messages (content, sender_name, recipient_name, category) 
+              VALUES ($1, $2, $3, $4) 
+              RETURNING id, created_at`
+
+	err = mc.DB.QueryRow(
+		query,
+		message.Content,
+		message.SenderName,
+		message.RecipientName,
+		message.Category,
+	).Scan(&message.ID, &message.CreatedAt)
+
 	if err != nil {
-		http.Error(w, "Failed to save message", http.StatusInternalServerError)
+		http.Error(w, "Failed to save message: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -53,7 +69,7 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 
 // GetMessageList mengembalikan daftar pesan
 func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Request) {
-	rows, err := mc.DB.Query("SELECT id, content, created_at FROM messages")
+	rows, err := mc.DB.Query("SELECT id, content, sender_name, recipient_name, category, created_at FROM messages")
 	if err != nil {
 		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
 		return
@@ -63,7 +79,14 @@ func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Reque
 	var messageList []models.Message
 	for rows.Next() {
 		var message models.Message
-		err := rows.Scan(&message.ID, &message.Content, &message.CreatedAt)
+		err := rows.Scan(
+			&message.ID,
+			&message.Content,
+			&message.SenderName,
+			&message.RecipientName,
+			&message.Category,
+			&message.CreatedAt,
+		)
 		if err != nil {
 			http.Error(w, "Failed to scan message", http.StatusInternalServerError)
 			return
@@ -95,5 +118,4 @@ func (mc *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Reques
 		Data: data.ID,
 	}
 	ws.BroadcastMessage(msg)
-
 }
