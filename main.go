@@ -62,7 +62,7 @@ func main() {
 
 	// Middleware untuk menonaktifkan CORS
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://himtalks.japaneast.cloudapp.azure.com", "http://localhost:3000"}), // Ganti * dengan domain FE
+		handlers.AllowedOrigins([]string{"http://himtalks.japaneast.cloudapp.azure.com", "https://himtalks-frontend.vercel.app"}), // Ganti * dengan domain FE
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 		handlers.AllowCredentials(), // Mengaktifkan penggunaan credentials (cookies/session)
