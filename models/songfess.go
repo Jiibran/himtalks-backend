@@ -13,6 +13,7 @@ type Songfess struct {
 	SongTitle     string    `json:"song_title"`
 	Artist        string    `json:"artist"`
 	AlbumArt      string    `json:"album_art"`
+	PreviewURL    string    `json:"preview_url"` // Field baru
 	StartTime     int       `json:"start_time"`
 	EndTime       int       `json:"end_time"`
 	SenderName    string    `json:"sender_name"`
@@ -30,6 +31,7 @@ func CreateTableSongfess(db *sql.DB) error {
 		song_title TEXT,
 		artist TEXT,
 		album_art TEXT,
+		preview_url TEXT,
 		start_time INTEGER DEFAULT 0,
 		end_time INTEGER DEFAULT 30,
 		sender_name VARCHAR(50),

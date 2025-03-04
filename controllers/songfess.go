@@ -36,9 +36,9 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Simpan songfess ke database
-	query := `INSERT INTO songfess (content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name) 
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+	// Simpan songfess ke database (perhatikan penambahan preview_url)
+	query := `INSERT INTO songfess (content, song_id, song_title, artist, album_art, preview_url, start_time, end_time, sender_name, recipient_name) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
               RETURNING id, created_at`
 
 	err = sc.DB.QueryRow(
@@ -48,6 +48,7 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 		songfess.SongTitle,
 		songfess.Artist,
 		songfess.AlbumArt,
+		songfess.PreviewURL, // Field baru
 		songfess.StartTime,
 		songfess.EndTime,
 		songfess.SenderName,
@@ -73,7 +74,7 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 // GetSongfessList mengembalikan daftar songfess
 func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Request) {
 	rows, err := sc.DB.Query(
-		"SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name, created_at FROM songfess")
+		"SELECT id, content, song_id, song_title, artist, album_art, preview_url, start_time, end_time, sender_name, recipient_name, created_at FROM songfess")
 	if err != nil {
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
@@ -90,6 +91,7 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 			&songfess.SongTitle,
 			&songfess.Artist,
 			&songfess.AlbumArt,
+			&songfess.PreviewURL, // Field baru
 			&songfess.StartTime,
 			&songfess.EndTime,
 			&songfess.SenderName,
@@ -109,7 +111,7 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 // Hanya menampilkan data >= cutoff
 func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r *http.Request, cutoff time.Time) {
 	rows, err := sc.DB.Query(`
-        SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name, created_at 
+        SELECT id, content, song_id, song_title, artist, album_art, preview_url, start_time, end_time, sender_name, recipient_name, created_at 
         FROM songfess 
         WHERE created_at >= $1`, cutoff)
 	if err != nil {
@@ -128,6 +130,7 @@ func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r
 			&songfess.SongTitle,
 			&songfess.Artist,
 			&songfess.AlbumArt,
+			&songfess.PreviewURL, // Field baru
 			&songfess.StartTime,
 			&songfess.EndTime,
 			&songfess.SenderName,
@@ -156,7 +159,7 @@ func (sc *SongfessController) GetSongfessById(w http.ResponseWriter, r *http.Req
 
 	// Query database untuk mencari songfess dengan ID tertentu
 	query := `
-        SELECT id, content, song_id, song_title, artist, album_art, 
+        SELECT id, content, song_id, song_title, artist, album_art, preview_url,
                start_time, end_time, sender_name, recipient_name, created_at 
         FROM songfess 
         WHERE id = $1`
@@ -169,6 +172,7 @@ func (sc *SongfessController) GetSongfessById(w http.ResponseWriter, r *http.Req
 		&songfess.SongTitle,
 		&songfess.Artist,
 		&songfess.AlbumArt,
+		&songfess.PreviewURL, // Field baru
 		&songfess.StartTime,
 		&songfess.EndTime,
 		&songfess.SenderName,
