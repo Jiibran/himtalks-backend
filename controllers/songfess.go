@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -25,9 +26,16 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Validasi panjang pesan berdasarkan konfigurasi
+	charLimit, _ := models.GetMessageCharLimit(sc.DB)
+	if len(songfess.Content) > charLimit {
+		http.Error(w, fmt.Sprintf("Message content exceeds character limit of %d", charLimit), http.StatusBadRequest)
+		return
+	}
+
 	// Simpan songfess ke database
-	query := `INSERT INTO songfess (content, song_id, song_title, artist, album_art, start_time, end_time) 
-              VALUES ($1, $2, $3, $4, $5, $6, $7) 
+	query := `INSERT INTO songfess (content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
               RETURNING id, created_at`
 
 	err = sc.DB.QueryRow(
@@ -39,6 +47,8 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 		songfess.AlbumArt,
 		songfess.StartTime,
 		songfess.EndTime,
+		songfess.SenderName,
+		songfess.RecipientName,
 	).Scan(&songfess.ID, &songfess.CreatedAt)
 
 	if err != nil {
@@ -60,7 +70,7 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 // GetSongfessList mengembalikan daftar songfess
 func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Request) {
 	rows, err := sc.DB.Query(
-		"SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, created_at FROM songfess")
+		"SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name, created_at FROM songfess")
 	if err != nil {
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
@@ -79,6 +89,8 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 			&songfess.AlbumArt,
 			&songfess.StartTime,
 			&songfess.EndTime,
+			&songfess.SenderName,
+			&songfess.RecipientName,
 			&songfess.CreatedAt)
 		if err != nil {
 			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
@@ -93,7 +105,10 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 
 // Hanya menampilkan data >= cutoff
 func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r *http.Request, cutoff time.Time) {
-	rows, err := sc.DB.Query("SELECT id, content, song_id, created_at FROM songfess WHERE created_at >= $1", cutoff)
+	rows, err := sc.DB.Query(`
+        SELECT id, content, song_id, song_title, artist, album_art, start_time, end_time, sender_name, recipient_name, created_at 
+        FROM songfess 
+        WHERE created_at >= $1`, cutoff)
 	if err != nil {
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
@@ -103,7 +118,18 @@ func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r
 	var songfessList []models.Songfess
 	for rows.Next() {
 		var songfess models.Songfess
-		err := rows.Scan(&songfess.ID, &songfess.Content, &songfess.SongID, &songfess.CreatedAt)
+		err := rows.Scan(
+			&songfess.ID,
+			&songfess.Content,
+			&songfess.SongID,
+			&songfess.SongTitle,
+			&songfess.Artist,
+			&songfess.AlbumArt,
+			&songfess.StartTime,
+			&songfess.EndTime,
+			&songfess.SenderName,
+			&songfess.RecipientName,
+			&songfess.CreatedAt)
 		if err != nil {
 			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
 			return
