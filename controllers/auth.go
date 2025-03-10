@@ -115,7 +115,7 @@ func (ac *AdminController) Callback(w http.ResponseWriter, r *http.Request) {
 	// Redirect ke frontend
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		frontendURL = "https://himtalks-frontend.vercel.app"
+		frontendURL = "https://himtalks-admin.vercel.app/"
 	}
 
 	http.Redirect(w, r, frontendURL+"/auth-success", http.StatusTemporaryRedirect)
