@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4" // Ubah import path
 )
 
 var jwtKey = []byte(os.Getenv("SECRET_KEY")) // Ambil secret key dari .env
 
 type Claims struct {
-	Email string `json:"email"`
-	jwt.StandardClaims
+	Email                string `json:"email"`
+	jwt.RegisteredClaims        // Ubah StandardClaims menjadi RegisteredClaims
 }
 
 // GenerateToken membuat token JWT baru
@@ -20,8 +20,8 @@ func GenerateToken(email string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour) // Token berlaku 24 jam
 	claims := &Claims{
 		Email: email,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{ // Ubah StandardClaims menjadi RegisteredClaims
+			ExpiresAt: jwt.NewNumericDate(expirationTime), // Ubah format ExpiresAt
 		},
 	}
 
@@ -33,6 +33,10 @@ func GenerateToken(email string) (string, error) {
 func ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		// Validasi metode signing
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return jwtKey, nil
 	})
 
