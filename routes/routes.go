@@ -64,11 +64,16 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 	adminHandler := &controllers.AdminHandler{DB: db}
 	admin.Use(middleware.CheckIsAdmin(db)) // Cek di middleware
 	admin.HandleFunc("/addAdmin", adminHandler.AddAdmin).Methods("POST")
+	admin.HandleFunc("/list", adminHandler.GetAdminList).Methods("GET")
+	admin.HandleFunc("/removeAdmin", adminHandler.RemoveAdmin).Methods("POST")
 	admin.HandleFunc("/configSongfessDays", adminHandler.UpdateSongfessDays).Methods("POST")
 	admin.HandleFunc("/blacklist", adminHandler.AddBlacklistWord).Methods("POST")
+	admin.HandleFunc("/blacklist", adminHandler.GetBlacklistWords).Methods("GET")
+	admin.HandleFunc("/blacklist/remove", adminHandler.RemoveBlacklistWord).Methods("POST")
 	admin.HandleFunc("/songfessAll", songfessController.GetSongfessList).Methods("GET") // tanpa cutoff
 	admin.HandleFunc("/messages", messageController.GetMessageList).Methods("GET")
 	admin.HandleFunc("/message/delete", messageController.DeleteMessage).Methods("POST")
+	admin.HandleFunc("/songfess/delete", songfessController.DeleteSongfess).Methods("POST")
 
 	return r
 }

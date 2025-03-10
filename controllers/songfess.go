@@ -192,3 +192,25 @@ func (sc *SongfessController) GetSongfessById(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(songfess)
 }
+
+// DeleteSongfess menghapus songfess berdasarkan ID
+func (sc *SongfessController) DeleteSongfess(w http.ResponseWriter, r *http.Request) {
+	var data struct{ ID int }
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+	_, err := sc.DB.Exec("DELETE FROM songfess WHERE id=$1", data.ID)
+	if err != nil {
+		http.Error(w, "Failed to delete songfess", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
+	// Kirim pesan ke WebSocket
+	msg := ws.Message{
+		Type: "delete_songfess",
+		Data: data.ID,
+	}
+	ws.BroadcastMessage(msg)
+}

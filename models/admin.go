@@ -26,3 +26,9 @@ func IsAdmin(db *sql.DB, email string) (bool, error) {
 	err := db.QueryRow("SELECT COUNT(*) FROM admins WHERE email=$1", email).Scan(&count)
 	return (count > 0), err
 }
+
+// DeleteAdmin menghapus admin berdasarkan email
+func DeleteAdmin(db *sql.DB, email string) error {
+	_, err := db.Exec("DELETE FROM admins WHERE email=$1", email)
+	return err
+}

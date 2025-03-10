@@ -38,3 +38,23 @@ func IsBlacklisted(db *sql.DB, text string) (bool, error) {
 	}
 	return false, nil
 }
+
+// GetBlacklistedWords mengembalikan semua kata dalam blacklist
+func GetBlacklistedWords(db *sql.DB) ([]string, error) {
+	rows, err := db.Query("SELECT word FROM blacklist_words ORDER BY word")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var words []string
+	for rows.Next() {
+		var word string
+		if err := rows.Scan(&word); err != nil {
+			return nil, err
+		}
+		words = append(words, word)
+	}
+
+	return words, nil
+}
