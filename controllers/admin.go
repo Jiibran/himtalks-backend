@@ -179,3 +179,20 @@ func (ah *AdminHandler) RemoveBlacklistWord(w http.ResponseWriter, r *http.Reque
 		"message": "Word removed from blacklist successfully",
 	})
 }
+
+// GetConfigs mengembalikan semua konfigurasi sistem
+func (ah *AdminHandler) GetConfigs(w http.ResponseWriter, r *http.Request) {
+	configs, err := models.GetAllConfigs(ah.DB)
+	if err != nil {
+		http.Error(w, "Failed to fetch configs", http.StatusInternalServerError)
+		return
+	}
+
+	// Jika songfess_days tidak ada, berikan nilai default
+	if _, exists := configs["songfess_days"]; !exists {
+		configs["songfess_days"] = "7" // Default 7 hari
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(configs)
+}

@@ -36,3 +36,24 @@ func GetSongfessDays(db *sql.DB) (int, error) {
 	}
 	return days, nil
 }
+
+// GetAllConfigs mengembalikan semua konfigurasi yang tersedia
+func GetAllConfigs(db *sql.DB) (map[string]string, error) {
+	rows, err := db.Query("SELECT key, value FROM configs")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	configs := make(map[string]string)
+	for rows.Next() {
+		var key, value string
+		err := rows.Scan(&key, &value)
+		if err != nil {
+			return nil, err
+		}
+		configs[key] = value
+	}
+
+	return configs, nil
+}

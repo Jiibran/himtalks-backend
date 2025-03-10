@@ -67,6 +67,7 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 	admin.HandleFunc("/list", adminHandler.GetAdminList).Methods("GET")
 	admin.HandleFunc("/removeAdmin", adminHandler.RemoveAdmin).Methods("POST")
 	admin.HandleFunc("/configSongfessDays", adminHandler.UpdateSongfessDays).Methods("POST")
+	admin.HandleFunc("/configs", adminHandler.GetConfigs).Methods("GET")
 	admin.HandleFunc("/blacklist", adminHandler.AddBlacklistWord).Methods("POST")
 	admin.HandleFunc("/blacklist", adminHandler.GetBlacklistWords).Methods("GET")
 	admin.HandleFunc("/blacklist/remove", adminHandler.RemoveBlacklistWord).Methods("POST")
