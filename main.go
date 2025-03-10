@@ -28,6 +28,11 @@ func main() {
 	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	redirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
 	secretKey := os.Getenv("SECRET_KEY")
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
+	frontendURL := os.Getenv("FRONTEND_URL")
+
+	log.Println("Cookie Domain:", cookieDomain)
+	log.Println("Frontend URL:", frontendURL)
 
 	log.Println("Client ID:", clientID)
 	log.Println("Client Secret:", clientSecret)

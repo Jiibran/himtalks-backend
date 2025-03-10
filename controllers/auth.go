@@ -95,11 +95,50 @@ func (ac *AdminController) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log token di server
-	log.Println("[DEBUG] Generated JWT:", tokenString)
+	// Set token sebagai HTTP-Only cookie
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
+	if cookieDomain == "" {
+		cookieDomain = "" // Kosong untuk mengikat ke domain saat ini
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jwt",
+		Value:    tokenString,
+		Path:     "/",
+		Domain:   cookieDomain,
+		MaxAge:   24 * 60 * 60, // 24 jam
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode, // Untuk cross-origin
+	})
+
+	// Redirect ke frontend
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://himtalks-frontend.vercel.app"
+	}
+
+	http.Redirect(w, r, frontendURL+"/auth-success", http.StatusTemporaryRedirect)
+}
+
+// Tambahkan fungsi logout
+func (ac *AdminController) Logout(w http.ResponseWriter, r *http.Request) {
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
+
+	// Hapus cookie dengan mengatur MaxAge: -1
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jwt",
+		Value:    "",
+		Path:     "/",
+		Domain:   cookieDomain,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"token": tokenString,
+		"message": "Logout successful",
 	})
 }

@@ -31,8 +31,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Simpan email di context
-		ctx := context.WithValue(r.Context(), "email", claims.Email)
+		// Simpan email di context dengan key yang sama
+		ctx := context.WithValue(r.Context(), emailContextKey, claims.Email)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

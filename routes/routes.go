@@ -44,10 +44,11 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 	adminController := &controllers.AdminController{}
 	r.HandleFunc("/auth/google/login", adminController.Login).Methods("GET")
 	r.HandleFunc("/auth/google/callback", adminController.Callback).Methods("GET")
+	r.HandleFunc("/auth/logout", adminController.Logout).Methods("POST")
 
 	// Protected routes
 	protected := r.PathPrefix("/api").Subrouter()
-	protected.Use(middleware.AuthMiddleware) // cek JWT
+	protected.Use(middleware.AuthMiddlewareAdmin) // cek JWT
 	protected.HandleFunc("/protected", func(w http.ResponseWriter, r *http.Request) {
 		email := r.Context().Value("email").(string)
 		fmt.Fprintf(w, "Welcome, %s!", email)
