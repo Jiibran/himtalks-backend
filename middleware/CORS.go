@@ -7,7 +7,7 @@ func CORS(next http.Handler) http.Handler {
 		allowedOrigins := []string{
 			"http://himtalks.japaneast.cloudapp.azure.com",
 			"https://api.teknohive.me",
-			"https://himtalks-frontend.vercel.app",
+			"https://himtalks.vercel.app",
 			"https://himtalks-admin.vercel.app/",
 			// tambahkan domain lain yang diizinkan jika diperlukan
 		}
