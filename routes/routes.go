@@ -71,6 +71,12 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 	admin.HandleFunc("/blacklist", adminHandler.AddBlacklistWord).Methods("POST")
 	admin.HandleFunc("/blacklist", adminHandler.GetBlacklistWords).Methods("GET")
 	admin.HandleFunc("/blacklist/remove", adminHandler.RemoveBlacklistWord).Methods("POST")
+	// Endpoint untuk admin songfess dengan cutoff
+	admin.HandleFunc("/songfess", func(w http.ResponseWriter, r *http.Request) {
+		days, _ := models.GetSongfessDays(db)
+		cutoff := time.Now().AddDate(0, 0, -days)
+		songfessController.GetSongfessListWithCutoff(w, r, cutoff)
+	}).Methods("GET")
 	admin.HandleFunc("/songfessAll", songfessController.GetSongfessList).Methods("GET") // tanpa cutoff
 	admin.HandleFunc("/messages", messageController.GetMessageList).Methods("GET")
 	admin.HandleFunc("/message/delete", messageController.DeleteMessage).Methods("POST")

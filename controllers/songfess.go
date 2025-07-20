@@ -73,9 +73,18 @@ func (sc *SongfessController) SendSongfess(w http.ResponseWriter, r *http.Reques
 
 // GetSongfessList mengembalikan daftar songfess
 func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Request) {
-	rows, err := sc.DB.Query(
-		"SELECT id, content, song_id, song_title, artist, album_art, preview_url, start_time, end_time, sender_name, recipient_name, created_at FROM songfess")
+	rows, err := sc.DB.Query(`
+		SELECT id, content, song_id, song_title, artist, album_art, 
+		       COALESCE(preview_url, '') as preview_url, 
+		       COALESCE(start_time, 0) as start_time, 
+		       COALESCE(end_time, 0) as end_time, 
+		       COALESCE(sender_name, '') as sender_name, 
+		       COALESCE(recipient_name, '') as recipient_name, 
+		       created_at 
+		FROM songfess 
+		ORDER BY created_at DESC`)
 	if err != nil {
+		log.Printf("Error querying songfess: %v", err)
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
 	}
@@ -91,17 +100,25 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 			&songfess.SongTitle,
 			&songfess.Artist,
 			&songfess.AlbumArt,
-			&songfess.PreviewURL, // Field baru
+			&songfess.PreviewURL,
 			&songfess.StartTime,
 			&songfess.EndTime,
 			&songfess.SenderName,
 			&songfess.RecipientName,
 			&songfess.CreatedAt)
 		if err != nil {
+			log.Printf("Error scanning songfess row: %v", err)
 			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
 			return
 		}
 		songfessList = append(songfessList, songfess)
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating over songfess rows: %v", err)
+		http.Error(w, "Failed to process songfess data", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -111,10 +128,18 @@ func (sc *SongfessController) GetSongfessList(w http.ResponseWriter, r *http.Req
 // Hanya menampilkan data >= cutoff
 func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r *http.Request, cutoff time.Time) {
 	rows, err := sc.DB.Query(`
-        SELECT id, content, song_id, song_title, artist, album_art, preview_url, start_time, end_time, sender_name, recipient_name, created_at 
+        SELECT id, content, song_id, song_title, artist, album_art, 
+               COALESCE(preview_url, '') as preview_url, 
+               COALESCE(start_time, 0) as start_time, 
+               COALESCE(end_time, 0) as end_time, 
+               COALESCE(sender_name, '') as sender_name, 
+               COALESCE(recipient_name, '') as recipient_name, 
+               created_at 
         FROM songfess 
-        WHERE created_at >= $1`, cutoff)
+        WHERE created_at >= $1 
+        ORDER BY created_at DESC`, cutoff)
 	if err != nil {
+		log.Printf("Error querying songfess with cutoff: %v", err)
 		http.Error(w, "Failed to fetch songfess", http.StatusInternalServerError)
 		return
 	}
@@ -137,10 +162,18 @@ func (sc *SongfessController) GetSongfessListWithCutoff(w http.ResponseWriter, r
 			&songfess.RecipientName,
 			&songfess.CreatedAt)
 		if err != nil {
+			log.Printf("Error scanning songfess row with cutoff: %v", err)
 			http.Error(w, "Failed to scan songfess", http.StatusInternalServerError)
 			return
 		}
 		songfessList = append(songfessList, songfess)
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating over songfess rows with cutoff: %v", err)
+		http.Error(w, "Failed to process songfess data", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -159,8 +192,13 @@ func (sc *SongfessController) GetSongfessById(w http.ResponseWriter, r *http.Req
 
 	// Query database untuk mencari songfess dengan ID tertentu
 	query := `
-        SELECT id, content, song_id, song_title, artist, album_art, preview_url,
-               start_time, end_time, sender_name, recipient_name, created_at 
+        SELECT id, content, song_id, song_title, artist, album_art, 
+               COALESCE(preview_url, '') as preview_url,
+               COALESCE(start_time, 0) as start_time, 
+               COALESCE(end_time, 0) as end_time, 
+               COALESCE(sender_name, '') as sender_name, 
+               COALESCE(recipient_name, '') as recipient_name, 
+               created_at 
         FROM songfess 
         WHERE id = $1`
 
