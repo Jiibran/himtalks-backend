@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"strings"
 )
 
 // CreateTableAdmins membuat tabel admin
@@ -14,16 +15,19 @@ func CreateTableAdmins(db *sql.DB) error {
 	return err
 }
 
-// Tambahkan data admin
+// Tambahkan data admin (convert to lowercase)
 func InsertAdmin(db *sql.DB, email string) error {
+	email = strings.ToLower(email)
 	_, err := db.Exec("INSERT INTO admins (email) VALUES ($1)", email)
 	return err
 }
 
-// Cek apakah email admin
+// Cek apakah email admin (case insensitive)
 func IsAdmin(db *sql.DB, email string) (bool, error) {
 	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM admins WHERE email=$1", email).Scan(&count)
+	// Convert to lowercase for case-insensitive comparison
+	email = strings.ToLower(email)
+	err := db.QueryRow("SELECT COUNT(*) FROM admins WHERE LOWER(email)=$1", email).Scan(&count)
 	return (count > 0), err
 }
 

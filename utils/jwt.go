@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -41,12 +42,15 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	})
 
 	if err != nil {
+		log.Printf("JWT validation error: %v", err)
 		return nil, err
 	}
 
 	if !token.Valid {
+		log.Printf("JWT token is invalid")
 		return nil, fmt.Errorf("invalid token")
 	}
 
+	log.Printf("JWT validated successfully for email: %s", claims.Email)
 	return claims, nil
 }
