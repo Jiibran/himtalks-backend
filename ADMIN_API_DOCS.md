@@ -7,9 +7,9 @@ All admin endpoints require:
 3. **JWT Cookie**: Authentication via HTTP-only cookie (automatic after login)
 
 **⚠️ Important Setup**: 
-- First time setup requires adding admin user to database
-- Use: `go run add_admin.go your-email@gmail.com`
-- See `ADMIN_TROUBLESHOOTING.md` for detailed setup guide
+- First time setup requires manual database setup
+- See `MANUAL_ADMIN_SETUP.md` for SQL commands to create tables and add first admin
+- After first admin is added, use `/api/admin/addAdmin` endpoint to add more admins
 
 ## Admin Endpoints
 
@@ -118,6 +118,13 @@ POST /api/admin/songfess/delete
 GET /api/admin/list
 ```
 **Description**: Get list of all admin users
+**Response**: Array of admin email addresses
+```json
+[
+  "admin1@example.com",
+  "admin2@example.com"
+]
+```
 
 #### Add New Admin
 ```
@@ -129,6 +136,8 @@ POST /api/admin/addAdmin
   "Email": "newadmin@example.com"
 }
 ```
+**Description**: Add new admin user
+**Response**: 200 OK on success
 
 #### Remove Admin
 ```
@@ -138,6 +147,13 @@ POST /api/admin/removeAdmin
 ```json
 {
   "Email": "admin@example.com"
+}
+```
+**Description**: Remove admin user (cannot remove self)
+**Response**:
+```json
+{
+  "message": "Admin removed successfully"
 }
 ```
 
@@ -207,12 +223,11 @@ POST /api/admin/blacklist/remove
 This backend API is designed to work with a separate frontend application. 
 See `API_SPECIFICATION.md` for complete API documentation and `FRONTEND_TESTING_GUIDE.md` for testing flows.
 
-## Testing
+## Setup & Testing
 
-Use the provided test script:
-```bash
-bash test_admin_api.sh
-```
+1. **Database Setup**: See `MANUAL_ADMIN_SETUP.md` for SQL setup commands
+2. **API Testing**: Use `test_api.ps1` for PowerShell testing
+3. **Manual Testing**: Use curl commands in documentation
 
 ## WebSocket Updates
 
