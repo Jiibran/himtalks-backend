@@ -238,12 +238,48 @@ func (sc *SongfessController) DeleteSongfess(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Invalid payload", http.StatusBadRequest)
 		return
 	}
-	_, err := sc.DB.Exec("DELETE FROM songfess WHERE id=$1", data.ID)
+
+	if data.ID <= 0 {
+		http.Error(w, "Invalid songfess ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check if songfess exists before deleting
+	var exists bool
+	err := sc.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM songfess WHERE id=$1)", data.ID).Scan(&exists)
 	if err != nil {
+		log.Printf("Error checking songfess existence: %v", err)
+		http.Error(w, "Failed to verify songfess", http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		http.Error(w, "Songfess not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the songfess
+	result, err := sc.DB.Exec("DELETE FROM songfess WHERE id=$1", data.ID)
+	if err != nil {
+		log.Printf("Error deleting songfess: %v", err)
 		http.Error(w, "Failed to delete songfess", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "Songfess not found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("Songfess with ID %d deleted successfully", data.ID)
+
+	// Send response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Songfess deleted successfully",
+		"id":      data.ID,
+	})
 
 	// Kirim pesan ke WebSocket
 	msg := ws.Message{

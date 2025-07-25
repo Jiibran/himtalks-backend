@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"himtalks-backend/models"
@@ -69,8 +70,15 @@ func (mc *MessageController) SendMessage(w http.ResponseWriter, r *http.Request)
 
 // GetMessageList mengembalikan daftar pesan
 func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Request) {
-	rows, err := mc.DB.Query("SELECT id, content, sender_name, recipient_name, category, created_at FROM messages")
+	rows, err := mc.DB.Query(`
+		SELECT id, content, 
+		       COALESCE(sender_name, '') as sender_name, 
+		       COALESCE(recipient_name, '') as recipient_name, 
+		       category, created_at 
+		FROM messages 
+		ORDER BY created_at DESC`)
 	if err != nil {
+		log.Printf("Error querying messages: %v", err)
 		http.Error(w, "Failed to fetch messages", http.StatusInternalServerError)
 		return
 	}
@@ -88,10 +96,18 @@ func (mc *MessageController) GetMessageList(w http.ResponseWriter, r *http.Reque
 			&message.CreatedAt,
 		)
 		if err != nil {
+			log.Printf("Error scanning message row: %v", err)
 			http.Error(w, "Failed to scan message", http.StatusInternalServerError)
 			return
 		}
 		messageList = append(messageList, message)
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating over message rows: %v", err)
+		http.Error(w, "Failed to process message data", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -105,16 +121,52 @@ func (mc *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid payload", http.StatusBadRequest)
 		return
 	}
-	_, err := mc.DB.Exec("DELETE FROM messages WHERE id=$1", data.ID)
+
+	if data.ID <= 0 {
+		http.Error(w, "Invalid message ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check if message exists before deleting
+	var exists bool
+	err := mc.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM messages WHERE id=$1)", data.ID).Scan(&exists)
 	if err != nil {
+		log.Printf("Error checking message existence: %v", err)
+		http.Error(w, "Failed to verify message", http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		http.Error(w, "Message not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the message
+	result, err := mc.DB.Exec("DELETE FROM messages WHERE id=$1", data.ID)
+	if err != nil {
+		log.Printf("Error deleting message: %v", err)
 		http.Error(w, "Failed to delete message", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "Message not found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("Message with ID %d deleted successfully", data.ID)
+
+	// Send response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Message deleted successfully",
+		"id":      data.ID,
+	})
 
 	// Kirim pesan ke WebSocket
 	msg := ws.Message{
-		Type: "delete",
+		Type: "delete_message", // Make type more specific
 		Data: data.ID,
 	}
 	ws.BroadcastMessage(msg)
