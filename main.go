@@ -71,6 +71,25 @@ func main() {
 		log.Fatal("Failed to create blacklist table:", err)
 	}
 
+	// Hardcode admin pertama (ganti dengan email yang lu mau)
+	hardcodedAdmin := "2310631170103@student.unsika.ac.id"
+	
+	// Cek apakah admin sudah ada
+	isAdmin, err := models.IsAdmin(db, hardcodedAdmin)
+	if err != nil {
+		log.Printf("Error checking admin: %v", err)
+	} else if !isAdmin {
+		// Insert admin pertama
+		err = models.InsertAdmin(db, hardcodedAdmin)
+		if err != nil {
+			log.Printf("Error inserting hardcoded admin: %v", err)
+		} else {
+			log.Printf("Hardcoded admin inserted: %s", hardcodedAdmin)
+		}
+	} else {
+		log.Printf("Admin already exists: %s", hardcodedAdmin)
+	}
+
 	// Setup routes
 	r := routes.SetupRoutes(db)
 
