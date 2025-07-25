@@ -6,6 +6,11 @@ All admin endpoints require:
 2. **Admin Privileges**: User must be registered as admin in database
 3. **JWT Cookie**: Authentication via HTTP-only cookie (automatic after login)
 
+**⚠️ Important Setup**: 
+- First time setup requires adding admin user to database
+- Use: `go run add_admin.go your-email@gmail.com`
+- See `ADMIN_TROUBLESHOOTING.md` for detailed setup guide
+
 ## Admin Endpoints
 
 ### 🔐 Authentication Check

@@ -58,6 +58,18 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to create songfess table:", err)
 	}
+	err = models.CreateTableAdmins(db)
+	if err != nil {
+		log.Fatal("Failed to create admins table:", err)
+	}
+	err = models.CreateTableConfigs(db)
+	if err != nil {
+		log.Fatal("Failed to create configs table:", err)
+	}
+	err = models.CreateTableBlacklist(db)
+	if err != nil {
+		log.Fatal("Failed to create blacklist table:", err)
+	}
 
 	// Setup routes
 	r := routes.SetupRoutes(db)
